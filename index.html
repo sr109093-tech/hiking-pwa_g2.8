@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="K-Path">
+<meta name="theme-color" content="#1B4332">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>K-Path v2.50</title>
+<link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@600;800&family=Black+Han+Sans&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+<style>
+:root {
+  --blue-oly: #0081C8; --red-oly: #EE334E; --purple-oly: #9A66E4; --yellow-oly: #FCB131;
+  --black: #081C15; --white: #FFFFFF; --green-900: #1B4332;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { 
+    margin: 0; padding: 0; width: 100%; height: 100%; 
+    background-color: var(--black); font-family: 'Pretendard', sans-serif; 
+    overflow: hidden; position: fixed; 
+}
+
+.app-container { width: 100%; height: 100%; position: relative; display: flex; flex-direction: column; }
+
+/* 페이지 제어 */
+.page { 
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+    display: none; flex-direction: column; background: var(--black); 
+}
+.page.active { display: flex; z-index: 20; }
+
+/* 상단바 (K-Path 고정) */
+.header-bar { 
+    height: 60px; width: 100%; display: flex; align-items: center; justify-content: space-between; 
+    padding: 0 20px; z-index: 1000; background: rgba(8, 28, 21, 0.7); backdrop-filter: blur(10px); 
+}
+.header-title { font-family: 'Black Han Sans', sans-serif; font-size: 1.6rem; color: var(--yellow-oly); }
+
+/* 홈 4분할 화면 */
+#homePage { 
+    display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; 
+    height: 100%; width: 100%; position: relative;
+}
+.oly-item { 
+    display: flex; flex-direction: column; justify-content: center; align-items: center; 
+    cursor: pointer; height: 100%; width: 100%; z-index: 100; position: relative;
+}
+.oi-walking { background-color: var(--blue-oly); }
+.oi-hiking { background-color: var(--red-oly); }
+.oi-cycling { background-color: var(--purple-oly); }
+.oi-running { background-color: var(--yellow-oly); }
+.oi-emoji { font-size: 5rem; pointer-events: none; margin-bottom: 5px; } 
+.oi-label { font-size: 1.4rem; font-weight: 800; color: white; pointer-events: none; }
+
+/* --- 중앙 정보창 (디자인 보강 및 클릭 간섭 완전 제거) --- */
+.central-stats {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 175px; height: 175px; 
+  background: var(--green-900); /* 배경색을 명확히 지정 */
+  border: 6px solid var(--white); border-radius: 50%;
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  z-index: 50; /* 버튼보다 아래 */
+  box-shadow: 0 0 40px rgba(0,0,0,0.8); text-align: center; 
+  pointer-events: none; /* 클릭을 절대 방해하지 않음 */
+}
+.cs-weather { font-size: 1.1rem; color: var(--yellow-oly); font-weight: 800; margin-bottom: 2px; }
+.cs-value { font-size: 1.9rem; font-weight: 800; color: white; line-height: 1.1; }
+.cs-label { font-size: 0.85rem; color: #ddd; margin-top: 5px; font-weight: 600; }
+
+/* 지도 화면 */
+#mapPage { height: 100%; display: none; flex-direction: column; }
+#mapView { flex: 1; width: 100%; position: relative; background: #222; }
+#mainMap { width: 100%; height: 100%; position: absolute; top: 0; left: 0; }
+
+.map-stats { 
+    position: absolute; top: 15px; left: 15px; right: 15px; z-index: 1000; 
+    background: rgba(255,255,255,0.95); padding: 12px; border-radius: 18px; 
+    display: flex; justify-content: space-around; box-shadow: 0 4px 15px rgba(0,0,0,0.2); 
+    color: #333; overflow-y: auto; max-height: 90px; 
+}
+.stat-box { text-align: center; flex: 1; }
+.stat-v { font-weight: 800; font-size: 1.25rem; color: var(--green-900); }
+
+/* 하단 컨트롤 */
+.map-controls { background: white; padding: 20px; border-radius: 25px 25px 0 0; z-index: 1001; }
+.btn-main { width: 100%; padding: 18px; border-radius: 15px; border: none; font-size: 1.4rem; font-weight: 800; color: white; cursor: pointer; }
+.btn-start { background: var(--blue-oly); }
+.btn-stop { background: var(--red-oly); }
+
+.map-btn { position: absolute; width: 55px; height: 55px; background: white; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 1000; cursor: pointer; }
+#btnMyLocation { bottom: 180px; right: 15px; color: var(--blue-oly); }
+#btnCameraWrap { bottom: 110px; right: 15px; color: #333; overflow: hidden; }
+
+/* 설정 모달 */
+.modal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:2000; align-items:center; justify-content:center; }
+.modal-content { background:white; color:#333; width:90%; max-width:400px; padding:25px; border-radius:25px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+.modal-content label { display: block; font-weight: 800; margin-bottom: 5px; color: var(--green-900); }
+.modal-content input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 10px; font-size: 1rem; color: #333; }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+    <div id="homePage" class="page active">
+        <div class="header-bar" style="position:absolute; background:none; backdrop-filter:none;">
+            <div class="header-title">K-Path</div>
+            <div style="font-size: 1.5rem; cursor: pointer; color:white; z-index: 1001;" onclick="showSettings()">⚙️</div>
+        </div>
+
+        <div class="oly-item oi-walking" onclick="goToMap('walking')"><div class="oi-emoji">🚶‍♂️</div><div class="oi-label">걷기</div></div>
+        <div class="oly-item oi-hiking" onclick="goToMap('hiking')"><div class="oi-emoji">🏔️</div><div class="oi-label">등산</div></div>
+        <div class="oly-item oi-cycling" onclick="goToMap('cycling')"><div class="oi-emoji">🚴</div><div class="oi-label">자전거</div></div>
+        <div class="oly-item oi-running" onclick="goToMap('running')"><div class="oi-emoji">🏃‍♂️</div><div class="oi-label">달리기</div></div>
+
+        <div class="central-stats">
+            <div id="homeWeather" class="cs-weather">🌡️ 로딩중</div>
+            <div id="homeDist" class="cs-value">0.0km</div>
+            <div id="homeCount" class="cs-label">활동 0회</div>
+        </div>
+    </div>
+
+    <div id="mapPage" class="page">
+        <div class="header-bar">
+            <div class="header-title">K-Path 활동</div>
+            <div onclick="location.reload()" style="cursor:pointer; color:white; font-size:1.5rem;">🏠</div>
+        </div>
+        <div id="mapView">
+            <div id="mainMap"></div>
+            <div class="map-stats">
+                <div class="stat-box"><div>거리</div><div id="statDist" class="stat-v">0.00km</div></div>
+                <div class="stat-box" style="border-left:1px solid #eee; border-right:1px solid #eee;"><div>시간</div><div id="statTime" class="stat-v">00:00</div></div>
+                <div class="stat-box"><div>고도</div><div id="statAlt" class="stat-v">0m</div></div>
+            </div>
+            <div id="btnMyLocation" class="map-btn" onclick="centerMap()">🎯</div>
+            <div id="btnCameraWrap" class="map-btn">📷<input type="file" accept="image/*" capture="environment" style="position:absolute; opacity:0; width:100%; height:100%;"></div>
+        </div>
+        <div class="map-controls">
+            <button id="btnAction" class="btn-main btn-start" onclick="toggleTracking()">시작하기</button>
+            <div id="saveGroup" style="display:none; gap:10px; margin-top:10px;">
+                <button onclick="exportGPX()" style="flex:1; padding:15px; border-radius:12px; background:var(--green-900); color:white; border:none; font-weight:800;">GPX 저장</button>
+                <button onclick="exportCSV()" style="flex:1; padding:15px; border-radius:12px; background:var(--green-900); color:white; border:none; font-weight:800;">CSV 저장</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="settingsModal" class="modal">
+    <div class="modal-content">
+        <h2 style="margin-top:0; color: #333;">⚙️ 앱 설정</h2>
+        <label>사용자 이름</label>
+        <input type="text" id="userNameInput" placeholder="이름을 입력하세요">
+        <label>나이 / 키 / 몸무게</label>
+        <div style="display:flex; gap:5px;">
+            <input type="number" id="ageInput" placeholder="나이">
+            <input type="number" id="heightInput" placeholder="키(cm)">
+            <input type="number" id="weightInput" placeholder="몸무게(kg)">
+        </div>
+        <button onclick="saveSettings()" style="width:100%; padding:15px; background:var(--green-900); color:white; border:none; border-radius:12px; font-weight:bold; margin-top:10px;">저장하고 닫기</button>
+        <button onclick="closeSettings()" style="width:100%; padding:10px; background:#eee; color:#333; border:none; border-radius:12px; margin-top:10px;">취소</button>
+    </div>
+</div>
+
+<script>
+let map = null, pathLine, trackPoints = [], posMarker = null;
+let isTracking = false, watchId = null, startTime, timerInterval;
+
+// 데이터 로드 및 적용
+function applyAllData() {
+    const dist = localStorage.getItem('kpath_total_dist') || "0.0";
+    const count = localStorage.getItem('kpath_total_count') || "0";
+    document.getElementById('homeDist').innerText = dist + "km";
+    document.getElementById('homeCount').innerText = `활동 ${count}회`;
+}
+
+async function fetchWeather(lat, lon) {
+    try {
+        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m&timezone=auto`);
+        const data = await res.json();
+        const temp = Math.round(data.current.temperature_2m);
+        document.getElementById('homeWeather').innerText = `🌡️ ${temp}°`;
+    } catch(e) { document.getElementById('homeWeather').innerText = "🌡️ --°"; }
+}
+
+function initMap() {
+    if (map) return;
+    map = L.map('mainMap', { zoomControl: false, attributionControl: false }).setView([37.5665, 126.9780], 15);
+    const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
+    const terrain = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png');
+    L.control.layers({ "일반지도": osm, "위성지도": satellite, "지형도": terrain }).addTo(map);
+    pathLine = L.polyline([], { color: '#EE334E', weight: 6 }).addTo(map);
+    posMarker = L.circleMarker([0,0], { radius: 8, color: 'white', fillColor: '#0081C8', fillOpacity: 1, weight: 3 }).addTo(map);
+}
+
+function goToMap(mode) {
+    document.getElementById('homePage').style.display = 'none';
+    document.getElementById('mapPage').style.display = 'flex';
+    document.getElementById('mapPage').classList.add('active');
+    setTimeout(() => { 
+        initMap(); 
+        map.invalidateSize(); 
+        centerMap();
+    }, 300);
+}
+
+function centerMap() {
+    navigator.geolocation.getCurrentPosition(pos => {
+        const { latitude, longitude } = pos.coords;
+        map.setView([latitude, longitude], 16);
+        posMarker.setLatLng([latitude, longitude]);
+    });
+}
+
+function toggleTracking() {
+    const btn = document.getElementById('btnAction');
+    if (!isTracking) {
+        isTracking = true;
+        btn.innerText = "중지하기"; btn.className = "btn-main btn-stop";
+        startTime = new Date(); trackPoints = [];
+        watchId = navigator.geolocation.watchPosition(pos => {
+            const pt = { lat: pos.coords.latitude, lng: pos.coords.longitude, alt: Math.round(pos.coords.altitude || 0), time: new Date().toISOString() };
+            trackPoints.push(pt);
+            pathLine.addLatLng([pt.lat, pt.lng]);
+            posMarker.setLatLng([pt.lat, pt.lng]);
+            map.panTo([pt.lat, pt.lng]);
+            document.getElementById('statDist').innerText = (trackPoints.length * 0.005).toFixed(2) + "km";
+            document.getElementById('statAlt').innerText = pt.alt + "m";
+        }, null, { enableHighAccuracy: true });
+        timerInterval = setInterval(() => {
+            const diff = Math.floor((new Date() - startTime) / 1000);
+            document.getElementById('statTime').innerText = Math.floor(diff/60).toString().padStart(2,'0') + ":" + (diff%60).toString().padStart(2,'0');
+        }, 1000);
+    } else {
+        isTracking = false; clearInterval(timerInterval); navigator.geolocation.clearWatch(watchId);
+        document.getElementById('btnAction').style.display = 'none';
+        document.getElementById('saveGroup').style.display = 'flex';
+        // 기록 누적
+        const curDist = parseFloat(document.getElementById('statDist').innerText);
+        const prevDist = parseFloat(localStorage.getItem('kpath_total_dist') || "0");
+        const prevCount = parseInt(localStorage.getItem('kpath_total_count') || "0");
+        localStorage.setItem('kpath_total_dist', (prevDist + curDist).toFixed(1));
+        localStorage.setItem('kpath_total_count', prevCount + 1);
+    }
+}
+
+function showSettings() { 
+    document.getElementById('settingsModal').style.display = 'flex';
+    document.getElementById('userNameInput').value = localStorage.getItem('kpath_user_name') || "";
+}
+function saveSettings() {
+    localStorage.setItem('kpath_user_name', document.getElementById('userNameInput').value);
+    document.getElementById('settingsModal').style.display = 'none';
+    applyAllData();
+}
+function closeSettings() { document.getElementById('settingsModal').style.display = 'none'; }
+
+function exportGPX() {
+    let gpx = `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="K-Path"><trk><trkseg>`;
+    trackPoints.forEach(p => gpx += `<trkpt lat="${p.lat}" lon="${p.lng}"><ele>${p.alt}</ele><time>${p.time}</time></trkpt>`);
+    gpx += `</trkseg></trk></gpx>`;
+    const blob = new Blob([gpx], {type: 'application/gpx+xml'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'K-Path.gpx'; a.click();
+}
+
+function exportCSV() {
+    let csv = "Time,Latitude,Longitude,Altitude\n";
+    trackPoints.forEach(p => csv += `${p.time},${p.lat},${p.lng},${p.alt}\n`);
+    const blob = new Blob(["\ufeff" + csv], {type: 'text/csv'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'K-Path.csv'; a.click();
+}
+
+window.onload = () => {
+    applyAllData();
+    navigator.geolocation.getCurrentPosition(p => fetchWeather(p.coords.latitude, p.coords.longitude));
+};
+</script>
+</body>
+</html>
